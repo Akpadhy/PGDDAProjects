@@ -1,0 +1,48 @@
+Steps for integrating R environment with Spark cluster:
+-------------------------------------------------------
+## Step 1: Get the docker image for SparkR set up 
+docker pull angelsevillacamins/spark-rstudio-shiny
+
+## Step 2: Define a network
+docker network create spark_network
+
+## Step 3: Create data volume container with a folder to share among the nodes
+docker create --net spark_network --name data-share \
+  --volume /home/rstudio/share angelsevillacamins/spark-rstudio-shiny
+  
+## Step 4: Deploy master node
+docker run -d --net spark_network --name master \
+  -p 8080:8080 -p 8787:8787 -p 80:3838 \
+  --volumes-from data-share \
+  --restart=always \
+  angelsevillacamins/spark-rstudio-shiny /usr/bin/supervisord --configuration=/opt/conf/master.conf
+  
+## Step 5:Changing permissions in the share folder of the data volume
+docker exec master chmod a+w /home/rstudio/share
+
+## Step 6: Deply worker01 node
+docker run -d --net spark_network --name worker01 \
+  --volumes-from data-share \
+  --restart=always \
+  angelsevillacamins/spark-rstudio-shiny /usr/bin/supervisord --configuration=/opt/conf/worker.conf
+  
+## Step 7:  Changing permissions in the share folder of the data volume
+docker exec worker01 chmod a+w /home/rstudio/share
+
+## Step 8: Deploy worker02 node
+docker run -d --net spark_network --name worker02 \
+  --volumes-from data-share \
+  --restart=always \
+  angelsevillacamins/spark-rstudio-shiny /usr/bin/supervisord --configuration=/opt/conf/worker.conf
+  
+## Step 9: Changing permissions in the share folder of the data volume
+docker exec worker02 chmod a+w /home/rstudio/share
+
+--------------------------------------------------------
+Now R environemnt with Spark cluster is ready
+
+Spark server should be accessible using the port 8080, thus, http://your.ip.as.above:8080
+
+R Studio server should be accessible using the port 8787, thus, http://your.ip.as.above:8787
+
+
